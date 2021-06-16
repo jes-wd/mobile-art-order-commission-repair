@@ -12,7 +12,14 @@ Author URI: https://jeswebdevelopment.com
 add_action('admin_menu', 'order_commission_repair_menu');
 
 function order_commission_repair_menu() {
-    add_menu_page('Order Commission Repair', 'Commission Repair', 'manage_options', 'ma-order-commission-repair', 'order_commission_repair_admin_page');
+    add_submenu_page(
+        'tools.php',
+        'Order Commission Repair',
+        'Commission Repair',
+        'manage_options',
+        'ma-order-commission-repair',
+        'order_commission_repair_admin_page'
+    );
 }
 
 function order_commission_repair_admin_page() {
@@ -38,7 +45,7 @@ function order_commission_repair_admin_page() {
         order_commission_repair_action();
     }
 
-    echo '<form action="options-general.php?page=ma-order-commission-repair" method="post">';
+    echo '<form action="tools.php?page=ma-order-commission-repair" method="post">';
 
     // this is a WordPress security feature - see: https://codex.wordpress.org/WordPress_Nonces
     wp_nonce_field('order_commission_repair_clicked');
@@ -53,25 +60,24 @@ function order_commission_repair_action() {
         global $wpdb;
         $broken_commissions = $wpdb->get_results("SELECT * FROM wp_postmeta WHERE meta_key='_wcpv_commission_added' AND post_id NOT IN ( SELECT order_id FROM wp_wcpv_commissions )");
         $have_deleted_commissions = $wpdb->query("DELETE FROM wp_postmeta WHERE meta_key='_wcpv_commission_added' AND post_id NOT IN ( SELECT order_id FROM wp_wcpv_commissions )");
-        // echo '<pre>';
-        // print_r($broken_commissions);
-        // echo '</pre>';
+
         if ($have_deleted_commissions && count($broken_commissions) > 0) {
             $fixed_order_count = 0;
             $error_count = 0;
             $WC_Product_Vendors_Order = new WC_Product_Vendors_Order(new WC_Product_Vendors_Commission(new WC_Product_Vendors_PayPal_MassPay()));
-            $log = '<b>Order Log:</b></br>';
+            $log = '<b>Fixed Commissions Log:</b></br>';
+            $log .= '<div style="max-height: 500px; overflow: scroll; width: fit-content;">';
             foreach ($broken_commissions as $broken_commission) {
-                // $wpdb->delete('wp_postmeta', array('meta_key' => $broken_commission['meta_key']));
                 // run the product vendor plugin's calculate commission function on the order. if not return true, add to error count
                 $fix_successful = $WC_Product_Vendors_Order->process($broken_commission->post_id);
                 $fix_successful ? $fixed_order_count++ : $error_count++;
                 $log .=
                     "Order ID: " . $broken_commission->post_id . '<br />' .
                     "Meta ID: " . $broken_commission->meta_key . '<br />' .
-                    "Error: " . $fix_successful . '<br />' .
-                    "-------------------------" . '<br />';
+                    "Status: " . ($fix_successful ? 'successful' : 'failed') . '<br />' .
+                    "---------------------------------------------" . '<br />';
             }
+            $log .= '</div>';
             file_put_contents('./log_' . date("j.n.Y") . '.txt', $log, FILE_APPEND);
             echo '
                 <div class="notice notice-success">
@@ -80,7 +86,7 @@ function order_commission_repair_action() {
             ';
             echo '
                 <p><b>Orders fixed:</b> ' . $fixed_order_count . '</p>
-                <p><b>Errors:</b> ' . $error_count . '</p><br />
+                <p><b>Errors:</b> ' . $error_count . '</p>
             ';
             echo $log;
         } else if (count($broken_commissions) === 0) {
