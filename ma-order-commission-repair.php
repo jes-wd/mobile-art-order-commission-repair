@@ -18,7 +18,8 @@ function order_commission_repair_menu() {
         'Commission Repair',
         'manage_options',
         'ma-order-commission-repair',
-        'order_commission_repair_admin_page'
+        'order_commission_repair_admin_page',
+        null
     );
 }
 
@@ -46,7 +47,14 @@ function order_commission_repair_admin_page() {
     }
 
     echo '<form action="tools.php?page=ma-order-commission-repair" method="post">';
-
+    echo '
+        <p>To ensure the best results:</p>
+        <ol>
+            <li>Complete the normal process you do with bulk changing orders from processing to completed. It is when an order is changed from processing to completed that the commission calculation action runs. We need to trigger that first to be able to fix any potential broken orders.</li>
+            <li>Run this function so that any potential commissions that failed can be fixed. Pay attention to the data on the next page to see if there is any relevant information that needs to be noted.</li>
+            <li>If all has succeeded, proceed with generating batch invoices as per normal.</li>
+        </ol> 
+    ';
     // this is a WordPress security feature - see: https://codex.wordpress.org/WordPress_Nonces
     wp_nonce_field('order_commission_repair_clicked');
     echo '<input type="hidden" value="true" name="order_commission_repair" />';
